@@ -117,8 +117,20 @@ button:hover {
   cursor: pointer;
 }
 
-.button-center {
+.centered {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+@media(max-width: 768px) {
+  .split {
+    display: block !important;
+  }
+
+  .cover-image{
+    width: 70%;
+    height: auto;
+    margin-top: 20px;
+  }
 }
