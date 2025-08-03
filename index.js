@@ -67,7 +67,5 @@ const baseUrl = "https://hiring-helper/negotiation/";
         alert("Session ID not found in URL.");
         return;
       }
-
-      const sessionUrl = `session.html?sessionId=${sessionId}`;
-      window.location.href = sessionUrl;
+      window.location.href = `session.html?sessionId=${sessionId}`;
     }
