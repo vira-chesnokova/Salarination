@@ -1,4 +1,3 @@
-const baseUrl = "https://hiring-helper/negotiation/";
     const createBtn = document.getElementById("createSessionBtn");
     const startBtn = document.getElementById("startBtn");
     const linkDisplay = document.getElementById("confirmation");
@@ -8,11 +7,9 @@ const baseUrl = "https://hiring-helper/negotiation/";
     const sessionIdFromUrl = urlParams.get("sessionId");
 
     if (sessionIdFromUrl) {
-      const fullLink = baseUrl + "?sessionId=" + sessionIdFromUrl;
       linkDisplay.textContent = `Loaded session: ${sessionIdFromUrl}`;
       startBtn.classList.add("hidden");
       createBtn.classList.add("hidden");
-      document.getElementById("roleSelection").classList.remove("hidden");
     }
 
     function generateId(length = 8) {
@@ -30,8 +27,8 @@ const baseUrl = "https://hiring-helper/negotiation/";
       for (let i = 0; i < maxRetries; i++) {
         const sessionId = generateId();
         tried.push(sessionId);
-        const exists = await checkIfSessionIdExists(sessionId);
-        if (!exists) return sessionId;
+        const snapshot = await db.ref(`sessions/${sessionId}`).once('value');
+        if (!snapshot.exists()) return sessionId;
       }
 
       throw new Error(`Failed to generate a unique session ID after ${maxRetries} attempts. Tried: ${tried.join(', ')}`);
@@ -40,11 +37,10 @@ const baseUrl = "https://hiring-helper/negotiation/";
     createBtn.addEventListener("click", () => {
       const sessionId = generateId();
       generateUniqueSessionId().then((sessionId) => {
-        createSessionInAirtable(sessionId);
+        createSessionInFirebase(sessionId);
 
         let baseUrl;
         if (window.location.origin === "null") {
-          // Running from file:// — simulate base
           baseUrl = "https://blueviolet-rail-310845.hostingersite.com/index.html";
         } else {
           // Use current origin + path minus trailing slash
@@ -67,5 +63,6 @@ const baseUrl = "https://hiring-helper/negotiation/";
         alert("Session ID not found in URL.");
         return;
       }
+
       window.location.href = `session.html?sessionId=${sessionId}`;
     }

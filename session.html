@@ -26,7 +26,7 @@
     <div class="card" id="submitHere">
       <div class="label">Enter Your Salary Range</div>
       <input type="text" id="salaryInput" placeholder="Salary Range (e.g., 80–100k Eur)" />
-      <div class="button-center">
+      <div class="centered">
         <button class="button" id="submitRange" onclick="submitRange()">Set Salary Range</button>
       </div>
     </div>
@@ -59,8 +59,13 @@
     </div>
   </div>
 
-  <script src="airtable-config.js"></script>
-  <script src="airtable.js"></script>
+  <!-- Firebase App -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <!-- Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script src="firebase.js"></script>
   <script src="script.js"></script>
   <script src="session.js"></script>
 </body>

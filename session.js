@@ -9,12 +9,6 @@ if (sessionIdFromUrl) {
   showReveailRange(sessionIdFromUrl);
 } 
 
-const pollingId = setInterval(() => {
-  updateJoinedCount(sessionIdFromUrl, pollingId);
-}, 1000);
-
-let pollingRange;
-
 function copyLink() {
   const link = `${window.location.origin}${window.location.pathname}?sessionId=${sessionId}`;
     navigator.clipboard.writeText(link).then(() => {
@@ -30,7 +24,7 @@ async function submitRange() {
     return;
   }
 
-  const record = await fetchSessionFromAirtable(sessionId);
+  const record = await fetchSessionFromFirebase(sessionId);
   if (!record) {
     alert("Session not found.");
     return;
@@ -44,32 +38,46 @@ async function submitRange() {
   document.getElementById("statusSelf").textContent = `✅ Your range: ${range}`;
   document.getElementById("statusOther").textContent = `Waiting for other person...`;
 
-  pollingRange = setInterval(() => {
-    showReveailRange(sessionId, pollingRange);
-  }, 3000);
+  db.ref(`sessions/${sessionId}`).on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    const count = (data["Range 1"] ? 1 : 0) + (data["Range 2"] ? 1 : 0);
+
+    if (count === 2) {
+      showReveailRange(sessionId);
+
+      // Stop listening to prevent duplicate UI updates
+      db.ref(`sessions/${sessionId}`).off();
+    }
+  });
 }
 
 async function showReveailRange(sessionId) {
-  const record = await fetchSessionFromAirtable(sessionId);
+  const record = await fetchSessionFromFirebase(sessionId);
   if (!record) return;
 
-  const fields = record.fields;
   let count = 0;
-  if (fields["Range 1"]) count++;
-  if (fields["Range 2"]) count++;
+  if (record["Range 1"]) count++;
+  if (record["Range 2"]) count++;
 
   if (count === 2) {
+    const joinId = getOrCreateLocalJoinId();
+
+  if (record["Person 1 Joined"] !== joinId && record["Person 2 Joined"] !== joinId) {
+    return;
+  }
+
     document.getElementById("revealRange").classList.remove("hidden");
-    if (pollingRange) {
-      clearInterval(pollingRange);
-    }
+
     document.getElementById("statusOther").classList.add("hidden");
     console.log("✅ Ready to reveal");
 
-    document.getElementById("range1").textContent = fields["Range 1"];
-    document.getElementById("range2").textContent = fields["Range 2"];
+    document.getElementById("range1").textContent = record["Range 1"];
+    document.getElementById("range2").textContent = record["Range 2"];
   }
 }
+
 
 function hasSubmittedRange(sessionId) {
   const submittedMap = JSON.parse(localStorage.getItem("rangeSubmissions") || "{}");
@@ -83,7 +91,7 @@ function markRangeSubmitted(sessionId) {
 }
 
 async function determineAndRedirectRole(sessionId) {
-  const record = await fetchSessionFromAirtable(sessionId);
+  const record = await fetchSessionFromFirebase(sessionId);
   if (!record) {
     alert("Session not found.");
     return;
@@ -93,25 +101,27 @@ async function determineAndRedirectRole(sessionId) {
     return;
   }
 
-  const fields = record.fields;
   const joinId = getOrCreateLocalJoinId();
 
-  if (fields["Person 1 Joined"] === joinId || fields["Person 2 Joined"] === joinId) {
+  if (record["Person 1 Joined"] === joinId || record["Person 2 Joined"] === joinId) {
     // Already joined — show UI
     document.getElementById('negotioation').classList.remove("hidden");
     return;
-  }
+  } 
 
-  if (!fields["Person 1 Joined"]) {
-    updatePersonJoined(record.id, "Person 1 Joined", joinId);
+  if (!record["Person 1 Joined"]) {
+    updatePersonJoined(sessionId, "Person 1 Joined", joinId);
     document.getElementById('negotioation').classList.remove("hidden");
-  } else if (!fields["Person 2 Joined"]) {
-    updatePersonJoined(record.id, "Person 2 Joined", joinId);
+    return;
+  } else if (!record["Person 2 Joined"]) {
+    updatePersonJoined(sessionId, "Person 2 Joined", joinId);
     document.getElementById('negotioation').classList.remove("hidden");
+    return;
   } else {
     alert("Both roles already taken.");
     return;
   }
+  
 }
 
 function getOrCreateLocalJoinId() {
@@ -124,23 +134,31 @@ function getOrCreateLocalJoinId() {
 }
 
 async function updateJoinedCount(sessionId) {
-  const record = await fetchSessionFromAirtable(sessionId);
+  const record = await fetchSessionFromFirebase(sessionId);
   if (!record) return;
 
-  const fields = record.fields;
+  const fields = record;
   let count = 0;
   if (fields["Person 1 Joined"]) count++;
   if (fields["Person 2 Joined"]) count++;
 
   document.getElementById("joinedCount").textContent = `${count}/2 joined`;
-
-  if (count === 2 && pollingId) {
-    document.getElementById("joinedCount").textContent = `${count}/2 joined ✅`
-    clearInterval(pollingId);
-    console.log("✅ Both joined. Stopped polling.");
-  }
-}
+};
 
 function openIndex() {
   window.location.href = "https://blueviolet-rail-310845.hostingersite.com/index.html";
-}
+};
+
+// Real-time listener for joined counter
+db.ref(`sessions/${sessionIdFromUrl}`).on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (!data) return;
+
+  const count = (data["Person 1 Joined"] ? 1 : 0) + (data["Person 2 Joined"] ? 1 : 0);
+  document.getElementById("joinedCount").textContent = `${count}/2 joined${count === 2 ? " ✅" : ""}`;
+
+  if (count === 2) {
+    db.ref(`sessions/${sessionIdFromUrl}`).off(); // stop listening when complete
+    console.log("✅ Both joined. Stopped listening.");
+  }
+});

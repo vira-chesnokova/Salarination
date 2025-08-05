@@ -115,12 +115,24 @@ button:hover {
   border-radius: 16px;
   font-size: 14px;
   cursor: pointer;
+  min-width: max-content;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .centered {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+.top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
 }
 
 @media(max-width: 768px) {
